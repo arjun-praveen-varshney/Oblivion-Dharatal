@@ -1,94 +1,120 @@
-import React, { useState } from 'react';
-import { useSimulationStore } from '../store/useSimulationStore';
+import { useState } from 'react';
+import { useStore } from '../store';
 import { startSimulation, stopSimulation } from '../simulation/simulationEngine';
-import { Play, Square, Settings2, Info } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
+import { Play, Square, Settings2, RotateCcw, Info, Telescope } from 'lucide-react';
+import type { SimulationScenario } from '../types';
+
+const SCENARIOS: { key: SimulationScenario; label: string; desc: string }[] = [
+  { key: 'NORMAL',               label: 'Normal Monitoring',      desc: 'Baseline stable operation' },
+  { key: 'SENSOR_NOISE',         label: 'Sensor Noise',           desc: 'Kalman filtering demo' },
+  { key: 'PERSISTENT_ANOMALY',   label: 'Persistent Anomaly',     desc: 'Sustained movement pattern' },
+  { key: 'ACCELERATING',         label: 'Accelerating',           desc: 'Increasing velocity' },
+  { key: 'INSAR_CONFIRMATION',   label: 'InSAR Confirmation',     desc: 'Satellite data integration' },
+  { key: 'NODE_FAILURE',         label: 'Node Failure',           desc: 'Self-healing mesh demo' },
+  { key: 'EARLY_WARNING',        label: 'Early Warning',          desc: 'Impact analysis + alert' },
+  { key: 'FULL_SCENARIO',        label: '▶ Full Scenario',        desc: 'Complete 11-stage event (~60s)' },
+];
 
 export function SimulationControls() {
-  const { activeScenario, setScenario, isJudgeMode, toggleJudgeMode, toggleOffline } = useSimulationStore();
+  const { activeScenario, setScenario, resetSimulation, toggleJudgeMode, isJudgeMode, toggleOffline, isOffline } = useStore();
   const [isRunning, setIsRunning] = useState(false);
-  const [isOpen, setIsOpen] = useState(false); // Collapsible state
+  const [isOpen, setIsOpen] = useState(true);
 
-  const handlePlay = (scenario: any) => {
-    setScenario(scenario);
+  const handleRun = (key: SimulationScenario) => {
+    resetSimulation();
+    setScenario(key);
     startSimulation();
     setIsRunning(true);
   };
 
-  const handleStop = () => {
+  const handleReset = () => {
     stopSimulation();
-    setScenario('NORMAL');
+    resetSimulation();
     setIsRunning(false);
-    window.location.reload(); // Simple reset for prototype demo
   };
 
   return (
-    <div className="fixed bottom-4 left-4 z-[2000] w-80">
-      <Card className="border-primary/30 shadow-lg bg-card/95 backdrop-blur-xl">
-        <CardHeader 
-          className="py-3 px-4 flex flex-row items-center justify-between cursor-pointer border-b border-border/50"
+    <div style={{
+      position: 'fixed', bottom: '1rem', left: '1rem', zIndex: 5000,
+      width: '13.5rem',
+    }}>
+      <div className="card" style={{ overflow: 'hidden', boxShadow: 'var(--shadow-overlay)', border: '1px solid rgba(13,148,136,0.25)' }}>
+        {/* Header */}
+        <button
           onClick={() => setIsOpen(!isOpen)}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.75rem', background: 'var(--color-sidebar-bg)', border: 'none', cursor: 'pointer', color: 'white' }}
         >
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Settings2 className="w-4 h-4 text-primary" />
-            DEMO SCENARIOS
-          </CardTitle>
-          <div className="text-xs text-muted font-medium bg-slate-100 px-2 py-1 rounded">
-            {isRunning ? 'RUNNING' : 'STOPPED'}
-          </div>
-        </CardHeader>
-        
+          <Settings2 size={13} color="var(--color-primary-light)" />
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, flex: 1, textAlign: 'left', letterSpacing: '0.04em' }}>DEMO CONTROLS</span>
+          {isRunning && <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', animation: 'pulse 1s infinite' }} />
+            LIVE
+          </span>}
+        </button>
+
         {isOpen && (
-          <CardContent className="p-4 space-y-3">
-            <div className="text-xs text-slate-500 mb-2 flex items-start gap-2 bg-blue-50/50 p-2 rounded">
-              <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-              <p>These controls drive the deterministic simulation engine for demonstration purposes.</p>
-            </div>
-            
-            <div className="space-y-2">
-              <ScenarioButton 
-                label="Full Subsidence Scenario" 
-                active={activeScenario === 'FULL_SUBSIDENCE'} 
-                onClick={() => handlePlay('FULL_SUBSIDENCE')} 
-                primary
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <ScenarioButton label="Normal Monitoring" active={activeScenario === 'NORMAL'} onClick={() => handlePlay('NORMAL')} />
-                <ScenarioButton label="Judge Mode" active={isJudgeMode} onClick={toggleJudgeMode} toggle />
-                <ScenarioButton label="Offline Degradation" active={false} onClick={toggleOffline} toggle />
-              </div>
+          <div style={{ padding: '0.5rem' }}>
+            {/* Info */}
+            <div style={{ fontSize: '0.62rem', color: 'var(--color-text-muted)', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: '0.35rem', padding: '0.3rem 0.5rem', marginBottom: '0.5rem', lineHeight: 1.5 }}>
+              Deterministic simulation. Each tick = 1 simulated day (1.8s real time).
             </div>
 
+            {/* Scenario list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '0.5rem' }}>
+              {SCENARIOS.map(s => (
+                <button key={s.key} onClick={() => handleRun(s.key)} style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  padding: '0.35rem 0.5rem',
+                  border: `1px solid ${activeScenario === s.key && isRunning ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  borderRadius: '0.35rem',
+                  background: activeScenario === s.key && isRunning ? 'rgba(13,148,136,0.08)' : 'transparent',
+                  cursor: 'pointer', textAlign: 'left', width: '100%',
+                }}>
+                  <Play size={9} color={activeScenario === s.key && isRunning ? 'var(--color-primary)' : 'var(--color-text-muted)'} />
+                  <div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: activeScenario === s.key && isRunning ? 'var(--color-primary)' : 'var(--color-text)', lineHeight: 1.2 }}>{s.label}</div>
+                    <div style={{ fontSize: '0.58rem', color: 'var(--color-text-muted)' }}>{s.desc}</div>
+                  </div>
+                  {activeScenario === s.key && isRunning && (
+                    <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: 'var(--color-primary)', animation: 'pulse 1.5s infinite' }} />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Mode toggles */}
+            <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '0.4rem' }}>
+              <ToggleBtn label="Judge Mode" active={isJudgeMode} onClick={toggleJudgeMode} color="var(--color-primary)" />
+              <ToggleBtn label="Offline" active={isOffline} onClick={toggleOffline} color="var(--color-warning)" />
+            </div>
+
+            {/* Reset */}
             {isRunning && (
-              <button 
-                onClick={handleStop}
-                className="w-full mt-4 flex items-center justify-center gap-2 py-2 bg-slate-100 hover:bg-red-50 text-red-600 rounded-md text-sm font-bold transition-colors border border-slate-200 hover:border-red-200"
-              >
-                <Square className="w-4 h-4" fill="currentColor" />
-                RESET DEMO
+              <button onClick={handleReset} style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                padding: '0.35rem', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.35rem',
+                background: 'rgba(239,68,68,0.05)', color: 'var(--color-critical)', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700,
+              }}>
+                <RotateCcw size={11} />RESET DEMO
               </button>
             )}
-          </CardContent>
+          </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }
 
-function ScenarioButton({ label, active, onClick, primary, toggle }: any) {
+function ToggleBtn({ label, active, onClick, color }: { label: string; active: boolean; onClick: () => void; color: string }) {
   return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center justify-between border transition-all ${
-        active && primary ? 'bg-primary text-primary-foreground border-primary shadow-sm' :
-        active && !primary ? 'bg-slate-200 text-slate-800 border-slate-300' :
-        primary ? 'bg-slate-800 text-slate-100 border-slate-700 hover:bg-slate-700' :
-        'bg-card text-slate-600 border-border hover:bg-slate-50'
-      }`}
-    >
-      <span>{label}</span>
-      {(!active && !toggle) && <Play className="w-3 h-3" />}
-      {active && <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>}
+    <button onClick={onClick} style={{
+      flex: 1, padding: '0.3rem 0.4rem', fontSize: '0.65rem', fontWeight: 700,
+      border: `1px solid ${active ? color : 'var(--color-border)'}`,
+      borderRadius: '0.35rem', cursor: 'pointer',
+      background: active ? `${color}14` : 'transparent',
+      color: active ? color : 'var(--color-text-muted)',
+    }}>
+      {active ? '● ' : '○ '}{label}
     </button>
   );
 }

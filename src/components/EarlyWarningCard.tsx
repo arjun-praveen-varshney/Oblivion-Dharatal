@@ -1,72 +1,113 @@
-import React from 'react';
-import { useSimulationStore } from '../store/useSimulationStore';
-import { AlertOctagon, ShieldAlert, Navigation } from 'lucide-react';
+import { useStore } from '../store';
+import { ShieldAlert, Navigation, Eye, CheckCheck, Building2, Satellite } from 'lucide-react';
 
 export function EarlyWarningCard() {
-  const { currentScenarioState, riskZones } = useSimulationStore();
-  const activeZone = riskZones[0];
+  const { scenarioState, riskZones, infrastructure, insar, notifications } = useStore();
+  const zone = riskZones[0];
+  const isActive = scenarioState === 'EARLY_WARNING' || scenarioState === 'RECOVERY';
+  if (!isActive || !zone) return null;
 
-  if (currentScenarioState !== 'EARLY_WARNING' || !activeZone) return null;
+  const impactedAssets = infrastructure.filter(a => a.impactStatus !== 'Safe');
+  const activeInSAR = insar.find(o => o.active);
+
+  const settlements = impactedAssets.filter(a => a.type === 'Settlement').length;
+  const roads = impactedAssets.filter(a => a.type === 'Road').length;
+  const utilities = impactedAssets.filter(a => a.type === 'Utility').length;
 
   return (
-    <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[3000] w-[600px] max-w-[90vw] animate-in fade-in slide-in-from-top-10 duration-500">
-      <div className="bg-white border-2 border-red-500 rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-red-600 text-white p-4 flex items-center gap-3">
-          <div className="bg-white/20 p-2 rounded-full animate-pulse">
-            <ShieldAlert className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-black tracking-widest uppercase">🚨 EARLY WARNING</h2>
-            <p className="font-semibold text-red-100 uppercase tracking-wider text-sm">Zone {activeZone.id} — High-Risk Subsidence</p>
-          </div>
+    <div className="animate-slide-down" style={{
+      position: 'fixed', top: '60px', left: '50%', transform: 'translateX(-50%)',
+      zIndex: 9000, width: '680px', maxWidth: '95vw',
+      background: 'white', borderRadius: '0.875rem',
+      border: '2px solid var(--color-critical)',
+      boxShadow: '0 24px 48px -8px rgba(239,68,68,0.3)',
+      overflow: 'hidden',
+    }}>
+      {/* Critical header */}
+      <div style={{ background: 'var(--color-critical)', padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '50%', padding: '0.4rem', animation: 'pulse 1s ease-in-out infinite' }}>
+          <ShieldAlert size={20} color="white" />
         </div>
+        <div>
+          <div style={{ color: 'white', fontWeight: 900, fontSize: '1rem', letterSpacing: '0.05em' }}>🚨 EARLY WARNING ISSUED</div>
+          <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.72rem', fontWeight: 600 }}>Zone {zone.id} — High Subsidence Risk — Simulated Alert</div>
+        </div>
+        <span style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.15)', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.65rem', color: 'white', fontWeight: 700 }}>
+          {zone.severity}
+        </span>
+      </div>
 
-        {/* Content */}
-        <div className="p-6 grid grid-cols-2 gap-6 bg-red-50/50">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-xs font-bold text-red-800 uppercase tracking-wider mb-1">Risk Level</h3>
-              <div className="text-xl font-black text-red-600 uppercase">{activeZone.severity}</div>
+      <div style={{ padding: '1rem 1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          {/* Left */}
+          <div>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.25rem' }}>Primary Evidence</div>
+              <div style={{ fontWeight: 700, color: 'var(--color-critical)' }}>Accelerating Deformation</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>+{zone.velocity.toFixed(1)} mm/day &nbsp;|&nbsp; {zone.persistence} days persistent</div>
             </div>
-            <div>
-              <h3 className="text-xs font-bold text-red-800 uppercase tracking-wider mb-1">Cause</h3>
-              <div className="font-bold text-slate-800">Accelerating deformation</div>
-              <div className="text-sm text-slate-600">Velocity: +{activeZone.velocity.toFixed(1)} mm/day</div>
+
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.25rem' }}>Supporting Evidence</div>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <span className="badge badge-stable">Ground Sensors ✓</span>
+                {activeInSAR && <span className="badge badge-insar">InSAR ✓</span>}
+                <span className="badge badge-stable">Historical ✓</span>
+              </div>
             </div>
+
             <div>
-              <h3 className="text-xs font-bold text-red-800 uppercase tracking-wider mb-1">Evidence Foundation</h3>
-              <div className="text-sm font-bold text-slate-700 flex flex-col gap-1">
-                <span>✓ Ground Sensor Network</span>
-                <span>✓ Sentinel-1 InSAR Trend</span>
-                <span>✓ Historical Correlation</span>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.25rem' }}>AI Assessment</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', background: 'var(--color-bg-muted)', padding: '0.4rem 0.6rem', borderRadius: '0.4rem' }}>
+                LSTM model indicates sustained acceleration. Isolation Forest anomaly confidence: HIGH.
               </div>
             </div>
           </div>
-          
-          <div className="space-y-4">
-            <div className="bg-white p-3 rounded-lg border border-red-200 shadow-sm">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Potential Impact</h3>
-              <ul className="text-sm font-bold text-slate-800 space-y-1">
-                {activeZone.affectedAssets.map(assetId => {
-                  if(assetId === 'INF-1') return <li key={assetId}>🏠 Settlement A</li>;
-                  if(assetId === 'INF-4') return <li key={assetId}>🛣️ Main Haul Road</li>;
-                  if(assetId === 'INF-7') return <li key={assetId}>⚡ Power Line Corridor</li>;
-                  return null;
-                })}
-              </ul>
+
+          {/* Right: Impact */}
+          <div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>Potential Impact Zone</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.75rem' }}>
+              {settlements > 0 && <ImpactRow icon="🏠" label="Settlements" count={settlements} />}
+              {roads > 0 && <ImpactRow icon="🛣️" label="Roads" count={roads} />}
+              {utilities > 0 && <ImpactRow icon="⚡" label="Utilities" count={utilities} />}
             </div>
-            <div className="bg-red-600 p-3 rounded-lg text-white shadow-inner">
-              <h3 className="text-xs font-bold text-red-200 uppercase tracking-wider mb-1">Recommended Action</h3>
-              <div className="font-black text-lg">FIELD INSPECTION</div>
-              <div className="text-xs font-medium text-red-100 mt-1 flex items-center gap-1">
-                <Navigation className="w-3 h-3" />
-                Dispatch team to coordinates {activeZone.lat}, {activeZone.lng}
+
+            {/* Notifications */}
+            {notifications.length > 0 && (
+              <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>Notifications Dispatched</div>
+                {notifications.map(n => (
+                  <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem', padding: '0.25rem 0', color: 'var(--color-text-secondary)' }}>
+                    <span style={{ fontWeight: 700, background: n.type === 'SMS' ? 'rgba(16,185,129,0.1)' : 'rgba(59,130,246,0.1)', color: n.type === 'SMS' ? 'var(--color-stable)' : '#3b82f6', borderRadius: '0.25rem', padding: '0.1rem 0.3rem', fontSize: '0.6rem' }}>{n.type}</span>
+                    <span>{n.recipient}</span>
+                    <span style={{ marginLeft: 'auto', color: 'var(--color-stable)' }}>✓ Sent</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* CTA */}
+            <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.5rem', padding: '0.5rem 0.75rem' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-critical)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Recommended Action</div>
+              <div style={{ fontWeight: 800, color: 'var(--color-critical)', fontSize: '0.9rem' }}>FIELD INSPECTION</div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '0.1rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <Navigation size={10} />Dispatch team to {zone.lat.toFixed(4)}, {zone.lng.toFixed(4)}
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ImpactRow({ icon, label, count }: { icon: string; label: string; count: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', padding: '0.3rem 0.5rem', background: 'rgba(239,68,68,0.04)', borderRadius: '0.3rem', border: '1px solid rgba(239,68,68,0.15)' }}>
+      <span style={{ fontSize: '0.9rem' }}>{icon}</span>
+      <span style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
+      <span style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--color-critical)' }}>{count}</span>
     </div>
   );
 }
